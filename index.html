@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Furufas</title>
+<style>
+  body { font-family: Arial; background: #fff0f5; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; }
+  h1, h2 { color: #d6006c; }
+  #login { display: flex; flex-direction: column; align-items: center; margin-top: 100px; }
+  #password { padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #d6006c; }
+  button { margin-top: 10px; padding: 10px 20px; border: none; border-radius: 5px; background-color: #d6006c; color: white; font-size: 16px; cursor: pointer; transition: 0.3s; }
+  button:hover { background-color: #ff007f; }
+  #calendar { display: none; margin-top: 20px; width: 100%; max-width: 500px; }
+  table { border-collapse: collapse; width: 100%; }
+  td, th { border: 1px solid #d6006c; width: 14.28%; height: 60px; text-align: center; cursor: pointer; font-size: 22px; transition: 0.3s; }
+  td:hover { background-color: #ffe0f0; transform: scale(1.05); }
+  .emoji-🔥 { color: #ff4500; }
+  .emoji-💦 { color: #1e90ff; }
+  .emoji-🍑 { color: #ff69b4; }
+  .emoji-🍒 { color: #ff0000; }
+  #navButtons { margin-top: 10px; }
+  #emojiPicker { margin-top: 10px; }
+  #emojiPicker span { cursor: pointer; font-size: 24px; margin: 0 5px; transition: 0.2s; }
+  #emojiPicker span:hover { transform: scale(1.3); }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h1>Furufas</h1>
+  <input type="password" id="password" placeholder="Digite a senha">
+  <button onclick="checkPassword()">Entrar</button>
+</div>
+
+<div id="calendar">
+  <h2 id="monthYear"></h2>
+  <table id="calendarTable">
+    <thead>
+      <tr>
+        <th>Dom</th><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th><th>Sáb</th>
+      </tr>
+    </thead>
+    <tbody id="calendarBody"></tbody>
+  </table>
+  <div id="navButtons">
+    <button onclick="prevMonth()">Anterior</button>
+    <button onclick="nextMonth()">Próximo</button>
+  </div>
+  <div id="emojiPicker">
+    Escolha emoji: <span onclick="setEmoji('🔥')">🔥</span><span onclick="setEmoji('💦')">💦</span><span onclick="setEmoji('🍑')">🍑</span><span onclick="setEmoji('🍒')">🍒</span>
+  </div>
+</div>
+
+<script>
+const password = "sex@2025";
+let currentDate = new Date();
+let selectedEmoji = '🔥';
+
+// **CONFIGURAR AQUI**
+const repoOwner = "SEU_USUARIO_GITHUB";
+const repoName = "furufas-calendar";
+const filePath = "marks.json";
+const token = "SEU_TOKEN_AQUI"; // cuidado para não deixar público
+
+let marksData = {};
+
+// Login
+function checkPassword() {
+  const input = document.getElementById('password').value;
+  if(input === password){
+    document.getElementById('login').style.display = 'none';
+    document.getElementById('calendar').style.display = 'block';
+    fetchMarks().then(renderCalendar);
+  } else { alert('Senha incorreta!'); }
+}
+
+function setEmoji(emoji){ selectedEmoji = emoji; }
+
+// Buscar marks.json do GitHub
+async function fetchMarks() {
+  const res = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`);
+  const data = await res.json();
+  const content = atob(data.content);
+  marksData = JSON.parse(content);
+  marksData.sha = data.sha; // necessário para atualizar
+}
+
+// Atualizar marks.json no GitHub
+async function updateGitHub() {
+  const content = btoa(JSON.stringify(marksData, null, 2));
+  const res = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `token ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      message: "Atualizar marcações Furufas",
+      content: content,
+      sha: marksData.sha
+    })
+  });
+  const updated = await res.json();
+  marksData.sha = updated.content.sha;
+}
+
+// Renderizar calendário
+function renderCalendar() {
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const lastDate = new Date(year, month + 1, 0).getDate();
+
+  document.getElementById('monthYear').innerText = `${currentDate.toLocaleString('pt-BR', {month:'long'})} ${year}`;
+
+  const calendarBody = document.getElementById('calendarBody');
+  calendarBody.innerHTML = '';
+
+  let date = 1;
+  for(let i = 0; i < 6; i++){
+    const row = document.createElement('tr');
+    for(let j = 0; j < 7; j++){
+      const cell = document.createElement('td');
+      if(i === 0 && j < firstDay || date > lastDate){
+        cell.innerHTML = '';
+      } else {
+        const key = `${year}-${month+1}-${date}`;
+        if(marksData[key]){
+          cell.innerText = date + ' ' + marksData[key];
+          cell.className = 'emoji-' + marksData[key];
+        } else {
+          cell.innerText = date;
+          cell.className = '';
+        }
+        cell.onclick = () => markDay(cell, key);
+        date++;
+      }
+      row.appendChild(cell);
+    }
+    calendarBody.appendChild(row);
+  }
+}
+
+// Marcar ou apagar dia
+async function markDay(cell, key){
+  if(cell.innerText.includes(selectedEmoji)){
+    if(confirm('Deseja apagar a marcação?')){
+      delete marksData[key];
+      await updateGitHub();
+      renderCalendar();
+    }
+  } else {
+    marksData[key] = selectedEmoji;
+    await updateGitHub();
+    renderCalendar();
+  }
+}
+
+function prevMonth(){ currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); }
+function nextMonth(){ currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); }
+</script>
+
+</body>
+</html>
