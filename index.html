@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lospulegos Tarefas - Render</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<h1>Lospulegos Tarefas - 2025</h1>
+<div id="monthNav">
+  <button id="prevMonth">&lt;</button>
+  <span id="monthName"></span>
+  <button id="nextMonth">&gt;</button>
+</div>
+<div id="calendarContainer"></div>
+<button id="verResultado">Ver quem ganhou R$50</button>
+<div id="resultado"></div>
+<div class="modal" id="taskModal">
+  <div class="modal-content">
+    <span class="close" id="closeModal">&times;</span>
+    <h3 id="modalTitle">Dia X</h3>
+    <div class="counts" id="modalCounts"></div>
+    <div id="modalTasks"></div>
+  </div>
+</div>
+<script>
+const meses = ["Setembro","Outubro","Novembro","Dezembro"];
+const diasSemana = ["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"];
+const ano = 2025;
+let currentMonth = 0;
+let tarefasFixas = {};
+const pessoas = ["Mae","Tutti","Peu"];
+let tarefasStatus = {};
+const calendarContainer = document.getElementById('calendarContainer');
+const monthName = document.getElementById('monthName');
+const modal = document.getElementById('taskModal');
+const modalTitle = document.getElementById('modalTitle');
+const modalTasks = document.getElementById('modalTasks');
+const modalCounts = document.getElementById('modalCounts');
+const closeModal = document.getElementById('closeModal');
+const verResultado = document.getElementById('verResultado');
+const resultado = document.getElementById('resultado');
+const prevMonth = document.getElementById('prevMonth');
+const nextMonth = document.getElementById('nextMonth');
+fetch('tarefas.json')
+  .then(res=>res.json())
+  .then(data=>{tarefasFixas=data;renderMonth();})
+  .catch(err=>console.error("Erro ao carregar tarefas:", err));
+function gerarDias(mesIndex){
+  let diasNoMes = new Date(ano, mesIndex+8,0).getDate();
+  let diasArray = [];
+  for(let dia=1; dia<=diasNoMes; dia++){
+    let diaObj = {numero: dia, tarefas:[...tarefasFixas.diaria]};
+    let semana = new Date(ano, mesIndex+8-1, dia).getDay();
+    if(semana===0) diaObj.tarefas.push(...tarefasFixas.domingo);
+    if(semana===1) diaObj.tarefas.push(...tarefasFixas.segunda);
+    if(semana===2) diaObj.tarefas.push(...tarefasFixas.terca);
+    if(semana===3) diaObj.tarefas.push(...tarefasFixas.quarta);
+    if(semana===4) diaObj.tarefas.push(...tarefasFixas.quinta);
+    if(semana===5) diaObj.tarefas.push(...tarefasFixas.sexta);
+    if(semana===6) diaObj.tarefas.push(...tarefasFixas.sabado);
+    diasArray.push(diaObj);
+  }
+  return diasArray;
+}
+function renderMonth(){
+  calendarContainer.innerHTML='';
+  monthName.textContent=`${meses[currentMonth]} ${ano}`;
+  const monthCard=document.createElement('div');
+  monthCard.classList.add('month-card');
+  const title=document.createElement('h2');
+  title.textContent=`${meses[currentMonth]} ${ano}`;
+  monthCard.appendChild(title);
+  const weekHeader=document.createElement('div');
+  weekHeader.classList.add('weekdays');
+  diasSemana.forEach(d=>{const wd=document.createElement('div'); wd.textContent=d; weekHeader.appendChild(wd);});
+  monthCard.appendChild(weekHeader);
+  const daysGrid=document.createElement('div');
+  daysGrid.classList.add('days-grid');
+  const dias = gerarDias(currentMonth);
+  dias.forEach(dia=>{
+    const dayEl=document.createElement('div');
+    dayEl.classList.add('day');
+    dayEl.innerHTML=`<span>${dia.numero}</span>`;
+    const diaKey=`${meses[currentMonth]}-${dia.numero}`;
+    tarefasStatus[diaKey]=dia.tarefas.map(t=>({nome:t.nome,emoji:t.emoji,categoria:t.categoria,feito:false,quem:""}));
+    const atualizarIcons = ()=>{
+      dayEl.querySelectorAll('.day-icons').forEach(e=>e.remove());
+      const iconesDiv=document.createElement('div');
+      iconesDiv.classList.add('day-icons');
+      tarefasStatus[diaKey].forEach(t=>{if(t.feito&&t.quem){const ic=document.createElement('span');ic.classList.add('icon',`icon-${t.quem}`);ic.textContent=t.emoji;iconesDiv.appendChild(ic);}});
+      dayEl.appendChild(iconesDiv);
+    };
+    atualizarIcons();
+    dayEl.addEventListener('click',()=>abrirModal(diaKey,meses[currentMonth],dia.numero));
+    dayEl.updateIcons=atualizarIcons;
+    daysGrid.appendChild(dayEl);
+  });
+  monthCard.appendChild(daysGrid);
+  calendarContainer.appendChild(monthCard);
+}
+function abrirModal(diaKey,mes,numero){modal.style.display='flex';modalTitle.textContent=`${mes} ${ano} - Dia ${numero}`;renderModal(diaKey);}
+function renderModal(diaKey){
+  modalTasks.innerHTML='';
+  let contagem={Mae:0,Tutti:0,Peu:0};
+  tarefasStatus[diaKey].forEach(tarefa=>{
+    if(tarefa.feito && tarefa.quem) contagem[tarefa.quem]++;
+    const taskEl=document.createElement('div');
+    taskEl.classList.add('task',tarefa.categoria);
+    taskEl.innerHTML=`<span>${tarefa.emoji} ${tarefa.nome}</span>`;
+    if(tarefa.feito){const span=document.createElement('span');span.classList.add('assigned');span.textContent=tarefa.quem;taskEl.appendChild(span);}
+    const btnContainer=document.createElement('div');
+    pessoas.forEach(p=>{const btn=document.createElement('button');btn.textContent=p;btn.classList.add('person-btn',`person-${p}`);btn.addEventListener('click',()=>{tarefa.feito=true;tarefa.quem=p;const dayEl=Array.from(document.getElementsByClassName('day')).find(d=>d.querySelector('span').textContent==diaKey.split('-')[1]);if(dayEl) dayEl.updateIcons();renderModal(diaKey);});btnContainer.appendChild(btn);});
+    taskEl.appendChild(btnContainer);
+    modalTasks.appendChild(taskEl);
+  });
+  modalCounts.textContent=`Tarefas concluídas: Mae ${contagem.Mae}, Tutti ${contagem.Tutti}, Peu ${contagem.Peu}`;
+}
+closeModal.addEventListener('click',()=>modal.style.display='none');
+window.addEventListener('click',e=>{if(e.target===modal) modal.style.display='none';});
+prevMonth.addEventListener('click',()=>{if(currentMonth>0){currentMonth--;renderMonth();}});
+nextMonth.addEventListener('click',()=>{if(currentMonth<meses.length-1){currentMonth++;renderMonth();}});
+verResultado.addEventListener('click',()=>{
+  let contagem={Mae:0,Tutti:0,Peu:0};
+  for(const diaKey in tarefasStatus){tarefasStatus[diaKey].forEach(t=>{if(t.feito && t.quem) contagem[t.quem]++;});}
+  let max=Math.max(contagem.Mae,contagem.Tutti,contagem.Peu);
+  let vencedores=Object.keys(contagem).filter(p=>contagem[p]===max);
+  if(vencedores.length===1){resultado.textContent=`O vencedor do Pix de R$50 é: ${vencedores[0]}!`;}
+  else{resultado.textContent=`Empate! Vencedores: ${vencedores.join(', ')}`;}
+});
+</script>
+</body>
+</html>
