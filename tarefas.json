@@ -1,0 +1,22 @@
+{
+  "diaria":[
+    {"nome":"Lavar louças","emoji":"🍽️","categoria":"Limpeza"},
+    {"nome":"Comida dos cachorros","emoji":"🐶","categoria":"Pets"},
+    {"nome":"Dar banho nos cachorros","emoji":"🛁🐶","categoria":"Pets"},
+    {"nome":"Molhar as plantas","emoji":"🌱","categoria":"Plantas"},
+    {"nome":"Limpeza da casa","emoji":"🧹","categoria":"Limpeza"},
+    {"nome":"Lavar roupa","emoji":"🩳","categoria":"Limpeza"},
+    {"nome":"Lavar banheiro","emoji":"🧼","categoria":"Limpeza"},
+    {"nome":"Lavar veículos","emoji":"🚗","categoria":"Veiculos"},
+    {"nome":"Lavar a área de lazer","emoji":"🌳","categoria":"Limpeza"},
+    {"nome":"Encher as garrafas de água","emoji":"💧","categoria":"Plantas"},
+    {"nome":"Pegar os cocos dos cachorros","emoji":"💩🐶","categoria":"Pets"}
+  ],
+  "segunda":[{"nome":"Colocar o lixo na rua","emoji":"🗑️","categoria":"Lixo"}],
+  "terca":[{"nome":"Colocar o lixo na rua","emoji":"🗑️","categoria":"Lixo"}],
+  "quarta":[],
+  "quinta":[],
+  "sexta":[{"nome":"Colocar o lixo na rua","emoji":"🗑️","categoria":"Lixo"}],
+  "sabado":[],
+  "domingo":[]
+}
